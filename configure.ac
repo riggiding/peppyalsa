@@ -10,7 +10,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 
 AC_CHECK_LIB([asound], [snd_pcm_open], , [AC_MSG_ERROR(You need libasound installed)], )
-AC_CHECK_LIB([fftw3], [fftw_plan_dft_r2c_1d], , [AC_MSG_ERROR(You need libfftw3 installed)], )
 AC_CHECK_LIB([m], [log])
 
 AC_OUTPUT(Makefile)

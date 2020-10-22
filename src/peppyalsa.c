@@ -36,16 +36,13 @@
 #include <alsa/asoundlib.h>
 #include "peppyalsa.h"
 #include "meter.h"
-#include "spectrum.h"
 
 #define DECAY_MS 400 // milliseconds to go from 32767 to 0
 #define MAX_METERS 2
 
 struct device meter_output;
-struct device spectrum_output;
 int num_meters, num_scopes;
 int meter_enabled = -1;
-int spectrum_enabled = -1;
 
 static int level_enable(snd_pcm_scope_t * scope) {
     snd_pcm_scope_peppyalsa_t *level =
@@ -173,9 +170,6 @@ static void level_update(snd_pcm_scope_t * scope) {
 	if(meter_enabled == 1) {
 		meter_output.update(meter_level_l, meter_level_r, level);
 	}
-	if(spectrum_enabled == 1) {
-		spectrum_output.update(meter_level_l, meter_level_r, level);
-	}
     
     level->old = snd_pcm_meter_get_now(pcm);
 }
@@ -250,10 +244,6 @@ int _snd_pcm_scope_peppyalsa_open(
     int meter_max = -1;
     int meter_show = -1;
     
-    const char *spectrum_fifo = "";
-    int spectrum_max = -1;
-    int spectrum_size = -1;  
-
     num_meters = MAX_METERS;
     num_scopes = MAX_METERS;
     
@@ -298,31 +288,7 @@ int _snd_pcm_scope_peppyalsa_open(
             }
             continue;
         }
-        if (strcmp(id, "spectrum") == 0) {
-			err = snd_config_get_string(n, &spectrum_fifo);
-			if (err < 0) {
-                SNDERR("Invalid type for %s", id);
-                return -EINVAL;  
-            }
-            continue;
-        }
-        if (strcmp(id, "spectrum_max") == 0) {
-			err = snd_config_get_integer(n, &spectrum_max);
-			if (err < 0) {
-                SNDERR("Invalid type for %s", id);
-                return -EINVAL;  
-            }
-            continue;
-        }
-        if (strcmp(id, "spectrum_size") == 0) {
-			err = snd_config_get_integer(n, &spectrum_size);
-			if (err < 0) {
-                SNDERR("Invalid type for %s", id);
-                return -EINVAL;  
-            }
-            continue;
-        }
-        
+
         SNDERR("Unknown field %s", id);
         return -EINVAL;
     }
@@ -336,14 +302,7 @@ int _snd_pcm_scope_peppyalsa_open(
     if (meter_show == -1) {
 		meter_show = 0;
     }
-    if (spectrum_max < 0) {
-		spectrum_max = DEFAULT_SPECTRUM_MAX;
-    }
-    if (spectrum_size < 0) {
-		spectrum_size = DEFAULT_SPECTRUM_SIZE;
-    }
-    
-    if (strlen(meter_fifo) == 0 && strlen(spectrum_fifo) == 0) {
+    if (strlen(meter_fifo) == 0) {
         SNDERR("No output device found");
         return -EINVAL;
     }
@@ -354,12 +313,6 @@ int _snd_pcm_scope_peppyalsa_open(
 		meter_enabled = 1;
 	}
 	
-	if (strlen(spectrum_fifo) != 0) {
-		spectrum_output = spectrum();
-		spectrum_output.init(spectrum_fifo, spectrum_max, -1, spectrum_size);
-		spectrum_enabled = 1;
-	}
-
     return snd_pcm_scope_peppyalsa_open(
             pcm,
             name, 
